@@ -1,0 +1,149 @@
+<!-- Version V1.0 -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>HackTheWorld - Incremental</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+            font-family: 'Courier New', Courier, monospace;
+            background-color: #05070a;
+            color: #00ff66;
+            text-shadow: 0 0 5px rgba(0, 255, 102, 0.5);
+        }
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 20px;
+            letter-spacing: 2px;
+            border-bottom: 2px solid #00ff66;
+            padding-bottom: 5px;
+        }
+        p {
+            font-size: 1.2rem;
+            margin: 5px 0;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            max-width: 800px;
+            width: 100%;
+        }
+        .shop-section {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-top: 20px;
+            width: 100%;
+        }
+        button, input, select {
+            margin: 5px;
+            padding: 12px 24px;
+            font-size: 14px;
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: bold;
+            background-color: #0a120b;
+            color: #00ff66;
+            border: 1px solid #00ff66;
+            border-radius: 4px;
+            box-shadow: 0 0 10px rgba(0, 255, 102, 0.2);
+            transition: all 0.2s ease;
+        }
+        button {
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #00ff66;
+            color: #05070a;
+            box-shadow: 0 0 15px rgba(0, 255, 102, 0.6);
+        }
+        input::placeholder {
+            color: rgba(0, 255, 102, 0.5);
+        }
+        input:focus, select:focus {
+            outline: none;
+            box-shadow: 0 0 15px rgba(0, 255, 102, 0.4);
+        }
+        .save-zone {
+            margin-top: 30px;
+            padding-top: 15px;
+            border-top: 1px dashed #00ff66;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+        }
+        .save-row {
+            display: flex;
+            align-items: center;
+        }
+        .save-btn {
+            background-color: #0a1c12;
+            border-color: #00ff66;
+        }
+        .save-btn:hover {
+            background-color: #00ff66;
+            color: #05070a;
+        }
+        .reset-btn {
+            background-color: #1a0505;
+            color: #ff3333;
+            border-color: #ff3333;
+            box-shadow: 0 0 10px rgba(255, 51, 51, 0.2);
+        }
+        .reset-btn:hover {
+            background-color: #ff3333;
+            color: #05070a;
+            box-shadow: 0 0 15px rgba(255, 51, 51, 0.6);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>[ HACK_THE_WORLD // SYS_READY ]</h1>
+        
+        <p>> Infiltrated Data: <span id="data-counter">0 B</span></p>
+        <p>> Current Bitrate: <span id="bps-counter">0 B</span>/s</p>
+        
+        <button id="click-btn" style="width: 100%; margin-top: 15px;">EXECUTE: exploit.exe</button>
+        <button id="upgrade-click-btn" style="width: 100%;">UPGRADE: CPU Overclock (Cost: 50 B)</button>
+
+        <div class="shop-section">
+            <button id="buy-miner-btn">INSTALL: Background Script (Cost: 15 B)</button>
+            <button id="buy-trojan-btn">INSTALL: Trojan Horse (Cost: 100 B)</button>
+            <button id="buy-ransomware-btn">INSTALL: Ransomware (Cost: 500 B)</button>
+            <button id="buy-boot-btn">INSTALL: Boot Sector Virus (Cost: 2.50 KB)</button>
+            <button id="buy-file-btn">INSTALL: File Virus (Cost: 10.00 KB)</button>
+            <button id="buy-macro-btn">INSTALL: Macro Virus (Cost: 50.00 KB)</button>
+            <button id="buy-resident-btn">INSTALL: Resident Virus (Cost: 250.00 KB)</button>
+            <button id="buy-multipartite-btn">INSTALL: Multipartite Virus (Cost: 1.00 MB)</button>
+            <button id="buy-polymorphic-btn">INSTALL: Polymorphic Virus (Cost: 5.00 MB)</button>
+        </div>
+
+        <div class="save-zone">
+            <div class="save-row">
+                <input type="text" id="save-name-input" placeholder="Enter save name...">
+                <button id="save-btn" class="save-btn">SAVE MATRIX</button>
+            </div>
+            <div class="save-row">
+                <select id="save-select">
+                    <option value="">-- Select a file --</option>
+                </select>
+                <button id="load-btn">LOAD MATRIX</button>
+            </div>
+            <button id="reset-btn" class="reset-btn">WIPE ALL SAVES</button>
+        </div>
+    </div>
+
+    <script src="Game.js"></script>
+</body>
+</html>
