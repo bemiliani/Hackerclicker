@@ -20,9 +20,30 @@ let infectionState = {
     winTargetBytes: 100000000000000
 };
 
+// Mettre à jour tous les affichages texte du DOM
+function updateDisplay() {
+    const dataCounter = document.getElementById('data-counter');
+    const bpsCounter = document.getElementById('bps-counter');
+    
+    if (typeof formatBytes === 'function') {
+        if (dataCounter) dataCounter.textContent = formatBytes(totalBytes);
+        if (bpsCounter) bpsCounter.textContent = formatBytes(bytesPerSecond);
+    } else {
+        if (dataCounter) dataCounter.textContent = totalBytes + " B";
+        if (bpsCounter) bpsCounter.textContent = bytesPerSecond + " B";
+    }
+
+    // Sauvegarde automatique dans le shared_state
+    if (typeof GameState !== 'undefined') {
+        GameState.save({ totalBytes: totalBytes });
+    }
+}
+
 // Initialisation de la UI du choix de pays
 function initCountrySelection() {
     const select = document.getElementById('country-select');
+    if (!select || typeof COUNTRY_GROUPS === 'undefined') return;
+
     COUNTRY_GROUPS.forEach(group => {
         group.countries.forEach(country => {
             const opt = document.createElement('option');
@@ -34,8 +55,10 @@ function initCountrySelection() {
 
     select.addEventListener('change', () => {
         const selected = getCountryData(select.value);
-        document.getElementById('country-stats-preview').innerHTML = 
-            `<p>Tier : <b>${selected.tier}</b> | Mult. Bytes : <b>x${selected.multBytes}</b> | Vitesse AV (Anti-Virus) : <b>x${selected.avSpeed}</b></p>`;
+        if (selected) {
+            document.getElementById('country-stats-preview').innerHTML = 
+                `<p>Tier : <b>${selected.tier}</b> | Mult. Bytes : <b>x${selected.multBytes}</b> | Vitesse AV : <b>x${selected.avSpeed}</b></p>`;
+        }
     });
     select.dispatchEvent(new Event('change'));
 
@@ -46,6 +69,7 @@ function initCountrySelection() {
 }
 
 function getCountryData(countryName) {
+    if (typeof COUNTRY_GROUPS === 'undefined') return null;
     return COUNTRY_GROUPS.find(g => g.countries.includes(countryName));
 }
 
@@ -92,45 +116,63 @@ function updateThreatEngine() {
 }
 
 function updateThreatUI() {
-    document.getElementById('infection-text').textContent = infectionState.infectionRate.toFixed(2) + "%";
-    document.getElementById('infection-fill').style.width = infectionState.infectionRate + "%";
+    const infText = document.getElementById('infection-text');
+    const infFill = document.getElementById('infection-fill');
+    const avText = document.getElementById('antivirus-text');
+    const avFill = document.getElementById('antivirus-fill');
 
-    document.getElementById('antivirus-text').textContent = infectionState.antivirusRate.toFixed(2) + "%";
-    document.getElementById('antivirus-fill').style.width = infectionState.antivirusRate + "%";
+    if (infText) infText.textContent = infectionState.infectionRate.toFixed(2) + "%";
+    if (infFill) infFill.style.width = infectionState.infectionRate + "%";
+
+    if (avText) avText.textContent = infectionState.antivirusRate.toFixed(2) + "%";
+    if (avFill) avFill.style.width = infectionState.antivirusRate + "%";
 
     const badge = document.getElementById('lockdown-badge');
-    if (infectionState.isLockdown) {
-        badge.classList.remove('hidden');
-    } else {
-        badge.classList.add('hidden');
+    if (badge) {
+        if (infectionState.isLockdown) badge.classList.remove('hidden');
+        else badge.classList.add('hidden');
     }
 }
 
 // Listeners pour les compétences du joueur
-document.getElementById('buy-encryption-btn').addEventListener('click', () => {
-    let cost = 1000 * Math.pow(1.5, infectionState.encryptionLevel);
-    if (totalBytes >= cost) {
-        totalBytes -= cost;
-        infectionState.encryptionLevel++;
-        document.getElementById('enc-cost').textContent = Math.floor(cost * 1.5);
+document.addEventListener('DOMContentLoaded', () => {
+    const encBtn = document.getElementById('buy-encryption-btn');
+    if (encBtn) {
+        encBtn.addEventListener('click', () => {
+            let cost = 1000 * Math.pow(1.5, infectionState.encryptionLevel);
+            if (totalBytes >= cost) {
+                totalBytes -= cost;
+                infectionState.encryptionLevel++;
+                document.getElementById('enc-cost').textContent = Math.floor(cost * 1.5);
+                updateDisplay();
+            }
+        });
     }
-});
 
-document.getElementById('ddos-attack-btn').addEventListener('click', () => {
-    let cost = 5000;
-    if (totalBytes >= cost && infectionState.antivirusRate > 0) {
-        totalBytes -= cost;
-        infectionState.antivirusRate = Math.max(0, infectionState.antivirusRate - 5);
-        if (infectionState.antivirusRate < 100) infectionState.isLockdown = false;
+    const ddosBtn = document.getElementById('ddos-attack-btn');
+    if (ddosBtn) {
+        ddosBtn.addEventListener('click', () => {
+            let cost = 5000;
+            if (totalBytes >= cost && infectionState.antivirusRate > 0) {
+                totalBytes -= cost;
+                infectionState.antivirusRate = Math.max(0, infectionState.antivirusRate - 5);
+                if (infectionState.antivirusRate < 100) infectionState.isLockdown = false;
+                updateDisplay();
+            }
+        });
     }
-});
 
-document.getElementById('zero-day-btn').addEventListener('click', () => {
-    let cost = 10000;
-    if (totalBytes >= cost) {
-        totalBytes -= cost;
-        infectionState.infectionRate = Math.min(100, infectionState.infectionRate + 2);
-        infectionState.zeroDayActiveTime = 30;
+    const zeroDayBtn = document.getElementById('zero-day-btn');
+    if (zeroDayBtn) {
+        zeroDayBtn.addEventListener('click', () => {
+            let cost = 10000;
+            if (totalBytes >= cost) {
+                totalBytes -= cost;
+                infectionState.infectionRate = Math.min(100, infectionState.infectionRate + 2);
+                infectionState.zeroDayActiveTime = 30;
+                updateDisplay();
+            }
+        });
     }
 });
 
@@ -138,9 +180,26 @@ document.getElementById('zero-day-btn').addEventListener('click', () => {
 function gameLoop() {
     totalBytes += getAdjustedByteGain(bytesPerSecond);
     updateThreatEngine();
+    updateDisplay();
 }
 
 window.addEventListener('load', () => {
+    if (typeof GameState !== 'undefined') {
+        const state = GameState.load();
+        totalBytes = state.totalBytes || 0;
+    }
+
     initCountrySelection();
+
+    const clickBtn = document.getElementById('click-btn');
+    if (clickBtn) {
+        clickBtn.addEventListener('click', () => {
+            totalBytes += getAdjustedByteGain(1);
+            updateThreatEngine();
+            updateDisplay();
+        });
+    }
+
+    updateDisplay();
     setInterval(gameLoop, 1000);
 });
