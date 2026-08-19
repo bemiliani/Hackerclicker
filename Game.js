@@ -1,217 +1,146 @@
-// Version V1.2
+// Variable d'état global
 let totalBytes = 0;
-let bytesPerClick = 1;
 let bytesPerSecond = 0;
-let buyMultiplier = 1;
 
 let upgrades = {
-    miner: { count: 0, cost: 15, power: 1, baseCost: 15, costMultiplier: 1.2, id: "buy-miner-btn", label: "Background Script" },
-    trojan: { count: 0, cost: 1000, power: 5, baseCost: 1000, costMultiplier: 1.2, id: "buy-trojan-btn", label: "Trojan Horse" },
-    ransomware: { count: 0, cost: 500, power: 40, baseCost: 500, costMultiplier: 1.2, id: "buy-ransomware-btn", label: "Ransomware" },
-    bootSector: { count: 0, cost: 2500, power: 200, baseCost: 2500, costMultiplier: 1.2, id: "buy-boot-btn", label: "Boot Sector Virus" },
-    fileVirus: { count: 0, cost: 10000, power: 900, baseCost: 10000, costMultiplier: 1.2, id: "buy-file-btn", label: "File Virus" },
-    macroVirus: { count: 0, cost: 50000, power: 4000, baseCost: 50000, costMultiplier: 1.2, id: "buy-macro-btn", label: "Macro Virus" },
-    residentVirus: { count: 0, cost: 1000000, power: 18000, baseCost: 1000000, costMultiplier: 1.2, id: "buy-resident-btn", label: "Resident Virus" },
-    multipartite: { count: 0, cost: 5000000, power: 85000, baseCost: 5000000, costMultiplier: 1.2, id: "buy-multipartite-btn", label: "Multipartite Virus" },
-    polymorphic: { count: 0, cost: 10000000, power: 450000, baseCost: 10000000, costMultiplier: 1.2, id: "buy-polymorphic-btn", label: "Polymorphic Virus" }
+    miner: { count: 0 },
+    trojan: { count: 0 },
+    ransomware: { count: 0 },
+    bootSector: { count: 0 },
+    fileVirus: { count: 0 }
 };
 
-let clickUpgradeCost = 50;
-let clickUpgradeCount = 0;
+let infectionState = {
+    selectedCountry: null,
+    infectionRate: 0,
+    antivirusRate: 0,
+    encryptionLevel: 0,
+    zeroDayActiveTime: 0,
+    isLockdown: false,
+    winTargetBytes: 100000000000000
+};
 
-const dataCounterDisplay = document.getElementById("data-counter");
-const bpsCounterDisplay = document.getElementById("bps-counter");
-const clickButton = document.getElementById("click-btn");
-const upgradeClickButton = document.getElementById("upgrade-click-btn");
-const clickUpgradeCostDisplay = document.getElementById("click-upgrade-cost");
-const saveButton = document.getElementById("save-btn");
-const loadButton = document.getElementById("load-btn");
-const resetButton = document.getElementById("reset-btn");
-const saveNameInput = document.getElementById("save-name-input");
-const saveSelect = document.getElementById("save-select");
-const consoleLog = document.getElementById("console-log");
-
-const SAVE_LIST_KEY = "hackTheWorld_save_list";
-
-function addLog(text) {
-    const entry = document.createElement("div");
-    entry.textContent = `> ${text}`;
-    consoleLog.prepend(entry);
-}
-
-function formatBytes(bytes) {
-    if (bytes === 0) return '0 B';
-    const sizes = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(1000));
-    return parseFloat((bytes / Math.pow(1000, i)).toFixed(i === 0 ? 0 : 2)) + ' ' + sizes[i];
-}
-
-function getBulkCost(item, amount) {
-    let cost = 0;
-    for (let i = 0; i < amount; i++) {
-        cost += Math.floor(item.baseCost * Math.pow(item.costMultiplier, item.count + i));
-    }
-    return cost;
-}
-
-function calculateBPS() {
-    let bps = 0;
-    for (let key in upgrades) {
-        bps += upgrades[key].count * upgrades[key].power;
-    }
-    bytesPerSecond = bps;
-}
-
-function updateUI() {
-    dataCounterDisplay.textContent = formatBytes(totalBytes);
-    bpsCounterDisplay.textContent = formatBytes(bytesPerSecond);
-    
-    upgradeClickButton.querySelector("span:first-child").textContent = `UPGRADE: CPU Overclock (${clickUpgradeCount})`;
-    clickUpgradeCostDisplay.textContent = `Cost: ${formatBytes(clickUpgradeCost)}`;
-    
-    for (let key in upgrades) {
-        const btn = document.getElementById(upgrades[key].id);
-        if (btn) {
-            const cost = getBulkCost(upgrades[key], buyMultiplier);
-            btn.innerHTML = `<span>INSTALL: ${upgrades[key].label} (${upgrades[key].count})</span><span class="price-tag">Cost (x${buyMultiplier}): ${formatBytes(cost)}</span>`;
-        }
-    }
-}
-
-[1, 10, 100].forEach(amt => {
-    document.getElementById(`mult-${amt}`).addEventListener("click", (e) => {
-        buyMultiplier = amt;
-        document.querySelectorAll(".multiplier-bar button").forEach(b => b.classList.remove("active-multiplier"));
-        e.target.classList.add("active-multiplier");
-        updateUI();
+// Initialisation de la UI du choix de pays
+function initCountrySelection() {
+    const select = document.getElementById('country-select');
+    COUNTRY_GROUPS.forEach(group => {
+        group.countries.forEach(country => {
+            const opt = document.createElement('option');
+            opt.value = country;
+            opt.textContent = `[Tier ${group.tier}] ${country}`;
+            select.appendChild(opt);
+        });
     });
-});
 
-clickButton.addEventListener("click", () => {
-    totalBytes += bytesPerClick;
-    dataCounterDisplay.textContent = formatBytes(totalBytes);
-});
+    select.addEventListener('change', () => {
+        const selected = getCountryData(select.value);
+        document.getElementById('country-stats-preview').innerHTML = 
+            `<p>Tier : <b>${selected.tier}</b> | Mult. Bytes : <b>x${selected.multBytes}</b> | Vitesse AV (Anti-Virus) : <b>x${selected.avSpeed}</b></p>`;
+    });
+    select.dispatchEvent(new Event('change'));
 
-upgradeClickButton.addEventListener("click", () => {
-    if (totalBytes >= clickUpgradeCost) {
-        totalBytes -= clickUpgradeCost;
-        clickUpgradeCount++;
-        bytesPerClick = bytesPerClick * 2;
-        clickUpgradeCost = Math.floor(clickUpgradeCost * 2.5);
-        addLog(`CPU Overclocked to Level ${clickUpgradeCount}. Multiplier doubled.`);
-        updateUI();
-    }
-});
-
-function setupShop() {
-    for (let key in upgrades) {
-        const btn = document.getElementById(upgrades[key].id);
-        if (btn) {
-            btn.addEventListener("click", () => {
-                const cost = getBulkCost(upgrades[key], buyMultiplier);
-                if (totalBytes >= cost) {
-                    totalBytes -= cost;
-                    upgrades[key].count += buyMultiplier;
-                    upgrades[key].cost = getBulkCost(upgrades[key], 1);
-                    calculateBPS();
-                    addLog(`Deployed ${buyMultiplier}x ${upgrades[key].label}. Yield increased.`);
-                    updateUI();
-                }
-            });
-        }
-    }
-}
-
-function updateSaveDropdown() {
-    saveSelect.innerHTML = '<option value="">-- Select a file --</option>';
-    const saveList = getSaveList();
-    saveList.forEach(saveName => {
-        const option = document.createElement("option");
-        option.value = saveName;
-        option.textContent = saveName;
-        saveSelect.appendChild(option);
+    document.getElementById('confirm-country-btn').addEventListener('click', () => {
+        infectionState.selectedCountry = getCountryData(select.value);
+        document.getElementById('country-modal').classList.add('hidden');
     });
 }
 
-function getSaveList() {
-    const listJson = localStorage.getItem(SAVE_LIST_KEY);
-    return listJson ? JSON.parse(listJson) : [];
+function getCountryData(countryName) {
+    return COUNTRY_GROUPS.find(g => g.countries.includes(countryName));
 }
 
-function saveGame() {
-    let name = saveNameInput.value.trim();
-    if (name === "") {
-        alert("Error: Please enter a valid name.");
-        return;
-    }
-    let upgradesSave = {};
-    for (let key in upgrades) {
-        upgradesSave[key] = { count: upgrades[key].count };
-    }
-    const gameState = {
-        totalBytes: totalBytes,
-        bytesPerClick: bytesPerClick,
-        clickUpgradeCost: clickUpgradeCost,
-        clickUpgradeCount: clickUpgradeCount,
-        upgrades: upgradesSave
-    };
-    localStorage.setItem("htw_save_" + name, JSON.stringify(gameState));
-    const saveList = getSaveList();
-    if (!saveList.includes(name)) {
-        saveList.push(name);
-        localStorage.setItem(SAVE_LIST_KEY, JSON.stringify(saveList));
-    }
-    addLog(`System state "${name}" saved.`);
-    saveNameInput.value = "";
-    updateSaveDropdown();
+// Multiplicateur sur les gains de Bytes
+function getAdjustedByteGain(baseGain) {
+    let mult = infectionState.selectedCountry ? infectionState.selectedCountry.multBytes : 1.0;
+    if (infectionState.isLockdown) mult *= 0.1; // Malus de 90% si Lockdown actif
+    return baseGain * mult;
 }
 
-function loadGame() {
-    const selectedName = saveSelect.value;
-    if (!selectedName) return;
-    const savedData = localStorage.getItem("htw_save_" + selectedName);
-    if (savedData) {
-        const gameState = JSON.parse(savedData);
-        totalBytes = gameState.totalBytes;
-        bytesPerClick = gameState.bytesPerClick || 1;
-        clickUpgradeCost = gameState.clickUpgradeCost || 50;
-        clickUpgradeCount = gameState.clickUpgradeCount || 0;
-        if (gameState.upgrades) {
-            for (let key in upgrades) {
-                if (gameState.upgrades[key]) {
-                    upgrades[key].count = gameState.upgrades[key].count || 0;
-                    upgrades[key].cost = getBulkCost(upgrades[key], 1);
-                }
-            }
+// Mise à jour de l'infection et de l'antivirus
+function updateThreatEngine() {
+    if (!infectionState.selectedCountry) return;
+
+    let totalBots = upgrades.miner.count + upgrades.trojan.count; 
+    let totalViruses = upgrades.ransomware.count + upgrades.bootSector.count + upgrades.fileVirus.count;
+    
+    // Calcul de l'infection
+    infectionState.infectionRate = Math.min(100, 
+        ((totalBytes / infectionState.winTargetBytes) * 100) + (totalBots * 0.01) + (totalViruses * 0.05)
+    );
+
+    // Calcul de l'antivirus (déclenché à 10% d'infection)
+    if (infectionState.infectionRate >= 10 && infectionState.antivirusRate < 100) {
+        let encReduction = Math.pow(0.85, infectionState.encryptionLevel);
+        let avSpeed = (infectionState.infectionRate * 0.05) * infectionState.selectedCountry.avSpeed * encReduction;
+        
+        if (infectionState.zeroDayActiveTime > 0) {
+            infectionState.zeroDayActiveTime--;
+        } else {
+            infectionState.antivirusRate = Math.min(100, infectionState.antivirusRate + avSpeed);
         }
-        calculateBPS();
-        updateUI();
-        addLog(`System state "${selectedName}" loaded.`);
+    }
+
+    if (infectionState.antivirusRate >= 100) {
+        infectionState.isLockdown = true;
+    }
+
+    if (infectionState.infectionRate >= 100) {
+        alert("VICTOIRE MONDIALE : Vous avez totalement piraté le monde !");
+    }
+
+    updateThreatUI();
+}
+
+function updateThreatUI() {
+    document.getElementById('infection-text').textContent = infectionState.infectionRate.toFixed(2) + "%";
+    document.getElementById('infection-fill').style.width = infectionState.infectionRate + "%";
+
+    document.getElementById('antivirus-text').textContent = infectionState.antivirusRate.toFixed(2) + "%";
+    document.getElementById('antivirus-fill').style.width = infectionState.antivirusRate + "%";
+
+    const badge = document.getElementById('lockdown-badge');
+    if (infectionState.isLockdown) {
+        badge.classList.remove('hidden');
+    } else {
+        badge.classList.add('hidden');
     }
 }
 
-function wipeAllSaves() {
-    if (confirm("Delete ALL saves?")) {
-        getSaveList().forEach(name => localStorage.removeItem("htw_save_" + name));
-        localStorage.removeItem(SAVE_LIST_KEY);
-        updateSaveDropdown();
-        addLog("All matrix saves wiped.");
+// Listeners pour les compétences du joueur
+document.getElementById('buy-encryption-btn').addEventListener('click', () => {
+    let cost = 1000 * Math.pow(1.5, infectionState.encryptionLevel);
+    if (totalBytes >= cost) {
+        totalBytes -= cost;
+        infectionState.encryptionLevel++;
+        document.getElementById('enc-cost').textContent = Math.floor(cost * 1.5);
     }
-}
-
-saveButton.addEventListener("click", saveGame);
-loadButton.addEventListener("click", loadGame);
-resetButton.addEventListener("click", wipeAllSaves);
-
-setupShop();
-window.addEventListener("load", () => {
-    updateSaveDropdown();
-    updateUI();
 });
 
-setInterval(() => {
-    if (bytesPerSecond > 0) {
-        totalBytes += bytesPerSecond;
-        dataCounterDisplay.textContent = formatBytes(totalBytes);
+document.getElementById('ddos-attack-btn').addEventListener('click', () => {
+    let cost = 5000;
+    if (totalBytes >= cost && infectionState.antivirusRate > 0) {
+        totalBytes -= cost;
+        infectionState.antivirusRate = Math.max(0, infectionState.antivirusRate - 5);
+        if (infectionState.antivirusRate < 100) infectionState.isLockdown = false;
     }
-}, 1000);
+});
+
+document.getElementById('zero-day-btn').addEventListener('click', () => {
+    let cost = 10000;
+    if (totalBytes >= cost) {
+        totalBytes -= cost;
+        infectionState.infectionRate = Math.min(100, infectionState.infectionRate + 2);
+        infectionState.zeroDayActiveTime = 30;
+    }
+});
+
+// Boucle principale du jeu (1 seconde)
+function gameLoop() {
+    totalBytes += getAdjustedByteGain(bytesPerSecond);
+    updateThreatEngine();
+}
+
+window.addEventListener('load', () => {
+    initCountrySelection();
+    setInterval(gameLoop, 1000);
+});

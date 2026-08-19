@@ -1,0 +1,165 @@
+<!-- Version V2.0 -->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>HackTheWorld - Matrix Skills</title>
+    <style>
+        body {
+            background-color: #05070a;
+            color: #00ff66;
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .container {
+            max-width: 800px;
+            width: 100%;
+            background-color: #0a120b;
+            border: 2px solid #00ff66;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 20px rgba(0, 255, 102, 0.4);
+        }
+        h1, h2 {
+            font-size: 1.5rem;
+            border-bottom: 2px solid #00ff66;
+            padding-bottom: 5px;
+            margin-top: 0;
+        }
+        .crypto-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .crypto-card, .node {
+            border: 1px solid #00ff66;
+            padding: 12px;
+            background: #020305;
+            border-radius: 4px;
+        }
+        .node.locked { opacity: 0.5; border-color: #444; }
+        .node.unlocked { border-color: #00ff66; background: #0a2212; }
+        button {
+            margin-top: 8px;
+            padding: 8px 12px;
+            font-family: inherit;
+            font-weight: bold;
+            background-color: #0a120b;
+            color: #00ff66;
+            border: 1px solid #00ff66;
+            border-radius: 4px;
+            cursor: pointer;
+            width: 100%;
+        }
+        button:hover:not(:disabled) { background-color: #00ff66; color: #05070a; }
+        button:disabled { border-color: #444; color: #555; cursor: not-allowed; }
+        .back-btn { margin-top: 15px; background-color: #1a0505; color: #ff3333; border-color: #ff3333; }
+        .back-btn:hover { background-color: #ff3333; color: #05070a; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>[ CRYPTO EXCHANGE ]</h1>
+        <p>> Octets : <span id="user-bytes">0</span></p>
+
+        <div class="crypto-grid" id="crypto-container"></div>
+
+        <h2>[ ARBRE DE COMPÉTENCES ]</h2>
+        <div id="tree-container"></div>
+
+        <button class="back-btn" onclick="window.location.href='Main.html'">RETOUR AU RÉSEAU</button>
+    </div>
+
+    <script src="shared_state.js"></script>
+    <script src="skill_tree.js"></script>
+    <script>
+        const cryptoMeta = {
+            tether:   { label: "USDT (Tier 1)" },
+            solana:   { label: "SOL (Tier 2)" },
+            ethereum: { label: "ETH (Tier 3)" },
+            bitcoin:  { label: "BTC (Tier 4)" }
+        };
+
+        function updateDisplay() {
+            SkillTree.load();
+            document.getElementById("user-bytes").textContent = formatBytes(SkillTree.totalBytes || 0);
+            renderCrypto();
+            renderTree();
+        }
+
+        function handleBuyCrypto(type) {
+            SkillTree.buyCrypto(type);
+            updateDisplay();
+        }
+
+        function renderCrypto() {
+            const container = document.getElementById("crypto-container");
+            container.innerHTML = "";
+            const bonuses = SkillTree.getBonuses();
+
+            Object.keys(cryptoMeta).forEach(type => {
+                const rate = SkillTree.cryptoRates[type];
+                const meta = cryptoMeta[type];
+                const owned = SkillTree.currencies[type] || 0;
+                const effectiveCost = Math.floor(rate.byteCost * bonuses.cryptoDiscountMult);
+                const reqText = rate.reqCrypto ? ` + ${rate.reqAmount} ${rate.reqCrypto.toUpperCase()}` : "";
+                const canAfford = SkillTree.totalBytes >= effectiveCost &&
+                    (!rate.reqCrypto || (SkillTree.currencies[rate.reqCrypto] || 0) >= rate.reqAmount);
+
+                const div = document.createElement("div");
+                div.className = "crypto-card";
+                div.innerHTML = `
+                    <strong>${meta.label}</strong>: <span>${owned}</span><br>
+                    <small>Coût: ${formatBytes(effectiveCost)}${reqText}</small>
+                `;
+                const btn = document.createElement("button");
+                btn.textContent = `ACHETER 1 ${type.toUpperCase()}`;
+                btn.disabled = !canAfford;
+                btn.onclick = () => handleBuyCrypto(type);
+                div.appendChild(btn);
+                container.appendChild(div);
+            });
+        }
+
+        function renderTree() {
+            const container = document.getElementById("tree-container");
+            container.innerHTML = "";
+
+            Object.values(SkillTree.nodes).forEach(node => {
+                const div = document.createElement("div");
+                const hasReq = !node.req || SkillTree.nodes[node.req].unlocked;
+                div.className = `node ${node.unlocked ? 'unlocked' : (hasReq ? '' : 'locked')}`;
+
+                div.innerHTML = `
+                    <strong>${node.name}</strong> ${node.unlocked ? "[ACTIF]" : `[Coût: ${node.cost} ${node.currency.toUpperCase()}]`}<br>
+                    <small>${node.description}</small>
+                `;
+
+                if (!node.unlocked) {
+                    const buyBtn = document.createElement("button");
+                    buyBtn.textContent = "DÉBLOQUER";
+                    buyBtn.disabled = !hasReq || (SkillTree.currencies[node.currency] || 0) < node.cost;
+                    buyBtn.onclick = () => {
+                        const res = SkillTree.buySkill(node.id);
+                        alert(res.message);
+                        updateDisplay();
+                    };
+                    div.appendChild(buyBtn);
+                }
+                container.appendChild(div);
+            });
+        }
+
+        window.addEventListener("load", updateDisplay);
+    </script>
+</body>
+</html>
